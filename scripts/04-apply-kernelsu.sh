@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KERNEL_DIR="$ROOT/kernel_source/NX709S/kernel_platform/msm-kernel"
+KERNEL_DIR="$ROOT/kernel_source/gts8/kernel_platform/msm-kernel"
 
 if [ ! -d "$KERNEL_DIR" ]; then
     echo "[!] Kernel source not found at $KERNEL_DIR"
@@ -15,10 +15,10 @@ cd "$KERNEL_DIR"
 echo "[*] Bootstrapping KernelSU (main branch) ..."
 curl -LSs https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh | bash -s main
 
-echo "[*] Adding KernelSU configs to NX709S diff config ..."
-DIFF="$KERNEL_DIR/arch/arm64/configs/vendor/NX709S-perf_diff.config"
+echo "[*] Adding KernelSU configs to diff config ..."
+DIFF="$KERNEL_DIR/arch/arm64/configs/vendor/waipio_sec_defconfig"
 if ! grep -q "CONFIG_KSU=y" "$DIFF"; then
-cat >> "$DIFF" <<'EOF'
+cat >> "$DIFF" <<'MARKER'
 
 # === KernelSU ===
 CONFIG_KSU=y
@@ -28,7 +28,7 @@ CONFIG_KPROBE_EVENTS=y
 CONFIG_OVERLAY_FS=y
 CONFIG_TMPFS_XATTR=y
 CONFIG_TMPFS_POSIX_ACL=y
-EOF
+MARKER
 echo "  added."
 else
 echo "  already present, skipping."
@@ -38,4 +38,5 @@ echo "[*] Verifying KernelSU integration ..."
 ls -la KernelSU 2>/dev/null && echo "  KernelSU dir/symlink present"
 grep -r "drivers/kernelsu" Makefile drivers/Makefile 2>/dev/null | head -3 || true
 
-echo "[*] Done."
+echo "[*
+] Done."
