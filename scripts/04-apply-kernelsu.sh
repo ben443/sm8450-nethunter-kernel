@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KERNEL_DIR="$ROOT/kernel_source/gts8/kernel_platform/msm-kernel"
+KERNEL_DIR="$ROOT/kernel_platform/msm-kernel"
 
 if [ ! -d "$KERNEL_DIR" ]; then
     echo "[!] Kernel source not found at $KERNEL_DIR"
