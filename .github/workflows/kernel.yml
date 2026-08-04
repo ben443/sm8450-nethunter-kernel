@@ -49,13 +49,13 @@ jobs:
       - name: Install build dependencies
         run: bash scripts/01-install-deps.sh
 
-      - name: Clone ZTE NX709S kernel source
+      - name: Clone gts8wifi kernel source
         run: |
-          git clone --depth=1 https://github.com/ztemt/NX709S kernel_source/NX709S
-          du -sh kernel_source/NX709S
+          git clone --depth=1 https://github.com/ben443/gts8-sm8450-kernel-platform.git
+          #du -sh kernel_source/NX709S
 
-      - name: Fetch toolchain (AOSP clang + mkbootimg + build/)
-        run: bash scripts/02-fetch-toolchain.sh
+     # - name: Fetch toolchain (AOSP clang + mkbootimg + build/)
+       # run: bash scripts/02-fetch-toolchain.sh
 
       - name: Apply KernelSU
         if: ${{ inputs.kernelsu }}
@@ -65,8 +65,8 @@ jobs:
         if: ${{ inputs.nethunter }}
         run: bash scripts/05-apply-nethunter.sh
 
-      - name: Patch ZTE quirks (vmlinux symbol fix)
-        run: bash scripts/04b-fix-zte-quirks.sh
+      - #name: Patch ZTE quirks (vmlinux symbol fix)
+       # run: bash scripts/04b-fix-zte-quirks.sh
 
       - name: Build kernel
         run: bash scripts/06-build-kernel.sh
