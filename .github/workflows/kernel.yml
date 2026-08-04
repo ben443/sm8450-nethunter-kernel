@@ -1,0 +1,98 @@
+name: Build NetHunter Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernelsu:
+        description: 'Integrate KernelSU'
+        required: true
+        default: 'true'
+        type: boolean
+      nethunter:
+        description: 'Apply NetHunter patches'
+        required: true
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+    steps:
+      - name: Checkout workspace
+        uses: actions/checkout@v4
+
+      - name: Free disk space (CI runner)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/Ruby \
+                      /opt/hostedtoolcache/PyPy /opt/hostedtoolcache/Python \
+                      /usr/local/share/boost /usr/local/share/powershell \
+                      /usr/lib/jvm /usr/local/lib/heroku /usr/local/julia* \
+                      /var/lib/gems /var/cache/apt/archives
+          sudo apt-get autoremove -y 2>/dev/null || true
+          sudo apt-get clean
+          df -h
+          free -h
+
+      - name: Setup swap (8 GB to survive kernel link)
+        run: |
+          sudo fallocate -l 8G /mnt/swap || sudo dd if=/dev/zero of=/mnt/swap bs=1M count=8192
+          sudo chmod 600 /mnt/swap
+          sudo mkswap /mnt/swap
+          sudo swapon /mnt/swap
+          free -h
+
+      - name: Install build dependencies
+        run: bash scripts/01-install-deps.sh
+
+      - name: Clone ZTE NX709S kernel source
+        run: |
+          git clone --depth=1 https://github.com/ztemt/NX709S kernel_source/NX709S
+          du -sh kernel_source/NX709S
+
+      - name: Fetch toolchain (AOSP clang + mkbootimg + build/)
+        run: bash scripts/02-fetch-toolchain.sh
+
+      - name: Apply KernelSU
+        if: ${{ inputs.kernelsu }}
+        run: bash scripts/04-apply-kernelsu.sh
+
+      - name: Apply NetHunter
+        if: ${{ inputs.nethunter }}
+        run: bash scripts/05-apply-nethunter.sh
+
+      - name: Patch ZTE quirks (vmlinux symbol fix)
+        run: bash scripts/04b-fix-zte-quirks.sh
+
+      - name: Build kernel
+        run: bash scripts/06-build-kernel.sh
+
+      - name: Show artifacts
+        if: always()
+        run: |
+          ls -la out/dist/ 2>/dev/null || ls -la out/ 2>/dev/null || true
+          du -sh out/ 2>/dev/null || true
+
+      - name: Upload kernel Image
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-Image
+          path: |
+            out/dist/Image
+            out/dist/dtbo.img
+            out/msm-kernel/dist/Image
+            out/msm-kernel/dist/dtbo.img
+          if-no-files-found: warn
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: out/log/
+          if-no-files-found: warn
