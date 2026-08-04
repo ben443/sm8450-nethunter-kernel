@@ -2,8 +2,8 @@
 # 04-apply-kernelsu.sh — drop KernelSU into the kernel tree
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KERNEL_DIR="$ROOT/kernel_platform/msm-kernel"
+#ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+KERNEL_DIR="kernel_platform/msm-kernel"
 
 if [ ! -d "$KERNEL_DIR" ]; then
     echo "[!] Kernel source not found at $KERNEL_DIR"
