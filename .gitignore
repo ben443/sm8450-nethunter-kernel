@@ -6,8 +6,8 @@ toolchains/mkbootimg/
 toolchains/avb/
 nethunter/
 
-# Cloned kernel source (1.5 GB, regenerate with `git clone https://github.com/ztemt/NX709S kernel_source/NX709S`)
-kernel_source/NX709S/
+# Cloned kernel source
+kernel_source/gts8wifi/
 
 # Boot images (DEVICE-SPECIFIC, do not commit — they are signed binaries)
 boot_image/**/*.img

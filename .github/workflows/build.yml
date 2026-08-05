@@ -47,30 +47,41 @@ jobs:
           free -h
 
       - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential bc curl git zip unzip \
-                                  bison flex libssl-dev libelf-dev \
-                                  python3 python3-pip gcc-aarch64-linux-gnu \
-                                  gcc-arm-linux-gnueabi
+        run: bash scripts/01-install-deps.sh
 
-      # Note: If your build_kernel_GKI.sh requires specific environment variables, 
-      # they should be exported here before running the script.
-      - name: Build kernel using GKI script
-        run: bash build_kernel_GKI.sh
+      - name: Fetch Toolchains and Sources
+        run: bash scripts/02-fetch-toolchain.sh
+
+      - name: Fetch gts8wifi kernel source
+        run: bash scripts/03-fetch-kernel.sh
+
+      - name: Apply KernelSU
+        if: ${{ inputs.kernelsu }}
+        run: bash scripts/04-apply-kernelsu.sh
+
+      - name: Apply NetHunter
+        if: ${{ inputs.nethunter }}
+        run: bash scripts/05-apply-nethunter.sh
+
+      - name: Build kernel
+        run: bash scripts/06-build-kernel.sh
 
       - name: Show artifacts
         if: always()
         run: |
-          ls -la out/ 2>/dev/null || true
+          ls -la out/dist/ 2>/dev/null || ls -la out/ 2>/dev/null || true
           du -sh out/ 2>/dev/null || true
 
       - name: Upload Kernel Artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-build-files
-          path: out/**/Image*
+          name: kernel-Image
+          path: |
+            out/dist/Image
+            out/dist/dtbo.img
+            out/msm-kernel/dist/Image
+            out/msm-kernel/dist/dtbo.img
           if-no-files-found: warn
 
       - name: Upload build log
@@ -78,5 +89,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-log
-          path: out/**/*.log
+          path: out/log/
           if-no-files-found: warn
