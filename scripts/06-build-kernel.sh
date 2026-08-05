@@ -41,19 +41,17 @@ mkdir -p "$OUT" "$DIST" "$LOG"
 
 cd "$KERNEL_DIR"
 
-# ---- Create techpack/stub/ (ZTE GPL drop omits it; Makefile expects it) ----
+# ---- Create techpack/stub/ if required by the vendor tree ----
 TECHPACK_STUB="$KERNEL_DIR/techpack/stub"
-if [ ! -f "$TECHPACK_STUB/Makefile" ]; then
-    echo "[*] Creating empty techpack/stub/ to satisfy Makefile (ZTE GPL drop omits this) ..."
+if [ -d "$KERNEL_DIR/techpack" ] && [ ! -f "$TECHPACK_STUB/Makefile" ]; then
+    echo "[*] Creating empty techpack/stub/ to satisfy Makefile expectations ..."
     mkdir -p "$TECHPACK_STUB"
     cat > "$TECHPACK_STUB/Makefile" <<'EOF'
 # Empty stub Makefile — required by techpack/Kbuild
 EOF
     cat > "$TECHPACK_STUB/Kbuild" <<'EOF'
 # SPDX-License-Identifier: GPL-2.0-only
-# Empty stub Kbuild — camera-kernel.zip and display-drivers.zip from the
-# ZTE GPL drop are NOT extracted here, since GKI builds reuse the stock
-# vendor_boot.img modules. This empty stub keeps the parent Makefile happy.
+# Empty stub Kbuild to keep the parent Makefile happy when techpack/stub is absent.
 EOF
 fi
 
@@ -68,10 +66,9 @@ mkdir -p "$MERGE_OUT"
 
 echo "[*] Merging defconfig fragments ..."
 BASE_VENDOR_CFG="$CFG_DIR/vendor/waipio_GKI.config"
-DEVICE_CFG="$(find "$CFG_DIR" -type f \( -iname '*gts8wifi*perf*config' -o -iname '*gts8wifi*diff*.config' -o -iname '*gts8wifi*defconfig' \) | sort | head -1 || true)"
-
-if [ -z "${DEVICE_CFG:-}" ]; then
-    DEVICE_CFG="$CFG_DIR/vendor/NX709S-perf_diff.config"
+DEVICE_CFG="$CFG_DIR/gts8wifi-waipio_defconfig"
+if [ ! -f "$DEVICE_CFG" ]; then
+    DEVICE_CFG="$(find "$CFG_DIR" -type f \( -iname '*gts8wifi*perf*config' -o -iname '*gts8wifi*diff*.config' -o -iname '*gts8wifi*defconfig' -o -iname '*x700*perf*config' -o -iname '*x700*diff*.config' -o -iname 'waipio_sec_defconfig' \) | sort | head -1 || true)"
 fi
 if [ ! -f "$DEVICE_CFG" ]; then
     echo "[!] Could not find a gts8wifi defconfig/diff fragment to merge."
