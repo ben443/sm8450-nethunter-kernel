@@ -66,7 +66,10 @@ mkdir -p "$MERGE_OUT"
 
 echo "[*] Merging defconfig fragments ..."
 BASE_VENDOR_CFG="$CFG_DIR/vendor/waipio_GKI.config"
-DEVICE_CFG="$(find "$CFG_DIR" -type f \( -iname '*gts8wifi*perf*config' -o -iname '*gts8wifi*diff*.config' -o -iname '*gts8wifi*defconfig' -o -iname '*x700*perf*config' -o -iname '*x700*diff*.config' -o -iname 'waipio_sec_defconfig' \) | sort | head -1 || true)"
+DEVICE_CFG="$CFG_DIR/gts8wifi-waipio_defconfig"
+if [ ! -f "$DEVICE_CFG" ]; then
+    DEVICE_CFG="$(find "$CFG_DIR" -type f \( -iname '*gts8wifi*perf*config' -o -iname '*gts8wifi*diff*.config' -o -iname '*gts8wifi*defconfig' -o -iname '*x700*perf*config' -o -iname '*x700*diff*.config' -o -iname 'waipio_sec_defconfig' \) | sort | head -1 || true)"
+fi
 if [ ! -f "$DEVICE_CFG" ]; then
     echo "[!] Could not find a gts8wifi defconfig/diff fragment to merge."
     exit 1
