@@ -3,8 +3,14 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KERNEL_DIR="$ROOT/kernel_source/NX709S/kernel_platform/msm-kernel"
+KERNEL_DIR="$ROOT/kernel_source/gts8wifi/kernel_platform/msm-kernel"
 NH_DIR="$ROOT/nethunter"
+
+if [ ! -d "$KERNEL_DIR" ]; then
+    echo "[!] Kernel source not found at $KERNEL_DIR"
+    echo "    Run: bash scripts/03-fetch-kernel.sh"
+    exit 1
+fi
 
 if [ ! -d "$NH_DIR" ]; then
     echo "[*] Cloning NetHunter project ..."
@@ -13,7 +19,16 @@ if [ ! -d "$NH_DIR" ]; then
         "$NH_DIR"
 fi
 
-DIFF="$KERNEL_DIR/arch/arm64/configs/vendor/NX709S-perf_diff.config"
+CFG_ROOT="$KERNEL_DIR/arch/arm64/configs"
+DIFF="$(find "$CFG_ROOT" -type f \( -iname '*gts8wifi*perf*config' -o -iname '*gts8wifi*diff*.config' -o -iname '*gts8wifi*defconfig' \) | sort | head -1 || true)"
+if [ -z "${DIFF:-}" ]; then
+    DIFF="$CFG_ROOT/vendor/NX709S-perf_diff.config"
+fi
+if [ ! -f "$DIFF" ]; then
+    echo "[!] Could not find a gts8wifi defconfig/diff fragment to patch."
+    exit 1
+fi
+echo "[*] Using kernel config fragment: ${DIFF#$KERNEL_DIR/}"
 
 if ! grep -q "=== NetHunter additions ===" "$DIFF"; then
 cat >> "$DIFF" <<'EOF'

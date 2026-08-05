@@ -61,6 +61,9 @@ jobs:
       - name: Fetch Toolchains and Sources
         run: bash scripts/02-fetch-toolchain.sh
 
+      - name: Fetch gts8wifi kernel source
+        run: bash scripts/03-fetch-kernel.sh
+
       - name: Apply KernelSU
         if: ${{ github.event.inputs.kernelsu == 'true' }}
         run: bash scripts/04-apply-kernelsu.sh
