@@ -49,10 +49,8 @@ jobs:
       - name: Install build dependencies
         run: bash scripts/01-install-deps.sh
 
-      - name: Clone gts8wifi kernel source
-        run: |
-          git clone --depth=1 https://github.com/ben443/gts8-sm8450-kernel-platform.git
-          #du -sh kernel_source/NX709S
+      - name: Fetch gts8wifi kernel source
+        run: bash scripts/03-fetch-kernel.sh
 
      # - name: Fetch toolchain (AOSP clang + mkbootimg + build/)
        # run: bash scripts/02-fetch-toolchain.sh
