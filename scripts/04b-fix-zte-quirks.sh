@@ -13,7 +13,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-K="$ROOT/kernel_source/gts8wifi/kernel_platform/msm-kernel"
+K="${KERNEL_TREE:-$ROOT/kernel_source/gts8wifi/kernel_platform/msm-kernel}"
 
 if [ ! -f "$K/kernel/fork.c" ]; then
     echo "[!] kernel source missing"

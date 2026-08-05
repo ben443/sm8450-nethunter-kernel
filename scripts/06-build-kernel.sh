@@ -43,16 +43,21 @@ cd "$KERNEL_DIR"
 
 # ---- Create techpack/stub/ if required by the vendor tree ----
 TECHPACK_STUB="$KERNEL_DIR/techpack/stub"
-if [ -d "$KERNEL_DIR/techpack" ] && [ ! -f "$TECHPACK_STUB/Makefile" ]; then
-    echo "[*] Creating empty techpack/stub/ to satisfy Makefile expectations ..."
+if [ -d "$KERNEL_DIR/techpack" ]; then
     mkdir -p "$TECHPACK_STUB"
-    cat > "$TECHPACK_STUB/Makefile" <<'EOF'
+    if [ ! -f "$TECHPACK_STUB/Makefile" ]; then
+        echo "[*] Creating empty techpack/stub/Makefile to satisfy Makefile expectations ..."
+        cat > "$TECHPACK_STUB/Makefile" <<'EOF'
 # Empty stub Makefile — required by techpack/Kbuild
 EOF
-    cat > "$TECHPACK_STUB/Kbuild" <<'EOF'
+    fi
+    if [ ! -f "$TECHPACK_STUB/Kbuild" ]; then
+        echo "[*] Creating empty techpack/stub/Kbuild to satisfy Makefile expectations ..."
+        cat > "$TECHPACK_STUB/Kbuild" <<'EOF'
 # SPDX-License-Identifier: GPL-2.0-only
 # Empty stub Kbuild to keep the parent Makefile happy when techpack/stub is absent.
 EOF
+    fi
 fi
 
 # ---- Merge defconfig (gki_defconfig + vendor base + device fragment) ----
