@@ -50,7 +50,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-                                  build-essential bc curl git zip unzip \
+                                  build-essential bc ccache curl git zip unzip \
                                   bison flex libssl-dev libelf-dev \
                                   python3 python3-pip gcc-aarch64-linux-gnu \
                                   gcc-arm-linux-gnueabi liblz4-tool libncurses5 \
