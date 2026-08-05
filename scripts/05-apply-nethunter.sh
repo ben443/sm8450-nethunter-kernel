@@ -22,7 +22,7 @@ fi
 CFG_ROOT="$KERNEL_DIR/arch/arm64/configs"
 DIFF="$(find "$CFG_ROOT" -type f \( -iname '*gts8wifi*perf*config' -o -iname '*gts8wifi*diff*.config' -o -iname '*gts8wifi*defconfig' \) | sort | head -1 || true)"
 if [ -z "${DIFF:-}" ]; then
-    DIFF="$CFG_ROOT/vendor/NX709S-perf_diff.config"
+    DIFF="$(find "$CFG_ROOT" -type f \( -iname '*perf*diff*.config' -o -iname '*perf*config' -o -iname '*diff*.config' \) | sort | head -1 || true)"
 fi
 if [ ! -f "$DIFF" ]; then
     echo "[!] Could not find a gts8wifi defconfig/diff fragment to patch."

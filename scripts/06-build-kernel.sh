@@ -1,182 +1,56 @@
 #!/usr/bin/env bash
-# 06-build-kernel.sh — direct make-based GKI kernel build (no build.sh dependency)
-# Modern kernel/build no longer ships build.sh. We invoke make directly with
-# a manually-merged defconfig to mirror device diffconfig composition.
+# 06-build-kernel.sh — run the kernel's root build_kernel_gki.sh wrapper
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KERNEL_DIR="$ROOT/kernel_source/gts8wifi/kernel_platform/msm-kernel"
-TC="$ROOT/toolchains"
+KERNEL_ROOT="$ROOT/kernel_source/gts8wifi"
+BUILD_SCRIPT="$KERNEL_ROOT/build_kernel_gki.sh"
 
-if [ ! -d "$KERNEL_DIR" ]; then
-    echo "[!] Kernel source missing at $KERNEL_DIR"
+OUT="$ROOT/out"
+DIST="$OUT/dist"
+LOG="$OUT/log"
+mkdir -p "$DIST" "$LOG"
+
+if [ ! -d "$KERNEL_ROOT" ]; then
+    echo "[!] Kernel source missing at $KERNEL_ROOT"
     echo "    bash scripts/03-fetch-kernel.sh"
     exit 1
 fi
 
-# ---- Toolchain discovery ----
-CLANG_DIR=$(ls -1d "$TC/clang-aosp/clang-r"* 2>/dev/null | sort -V | tail -1 || true)
-if [ -z "$CLANG_DIR" ]; then
-    echo "[!] No clang found under $TC/clang-aosp. Run 02-fetch-toolchain.sh first."
-    exit 1
-fi
-export PATH="$CLANG_DIR/bin:$PATH"
-echo "[*] Using clang: $CLANG_DIR"
-clang --version | head -1
-
-# ccache
-export USE_CCACHE=1
-export CCACHE_DIR="${CCACHE_DIR:-$HOME/.ccache}"
-export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-5G}"
-export CCACHE_COMPRESS=1
-export CCACHE_COMPRESSLEVEL=4
-mkdir -p "$CCACHE_DIR"
-ccache --max-size="$CCACHE_MAXSIZE" 2>/dev/null || true
-
-# ---- Output dirs ----
-OUT="$ROOT/out"
-DIST="$OUT/dist"
-LOG="$OUT/log"
-mkdir -p "$OUT" "$DIST" "$LOG"
-
-cd "$KERNEL_DIR"
-
-# ---- Create techpack/stub/ (ZTE GPL drop omits it; Makefile expects it) ----
-TECHPACK_STUB="$KERNEL_DIR/techpack/stub"
-if [ ! -f "$TECHPACK_STUB/Makefile" ]; then
-    echo "[*] Creating empty techpack/stub/ to satisfy Makefile (ZTE GPL drop omits this) ..."
-    mkdir -p "$TECHPACK_STUB"
-    cat > "$TECHPACK_STUB/Makefile" <<'EOF'
-# Empty stub Makefile — required by techpack/Kbuild
-EOF
-    cat > "$TECHPACK_STUB/Kbuild" <<'EOF'
-# SPDX-License-Identifier: GPL-2.0-only
-# Empty stub Kbuild — camera-kernel.zip and display-drivers.zip from the
-# ZTE GPL drop are NOT extracted here, since GKI builds reuse the stock
-# vendor_boot.img modules. This empty stub keeps the parent Makefile happy.
-EOF
-fi
-
-# ---- Merge defconfig (gki_defconfig + vendor base + device fragment) ----
-
-export ARCH=arm64
-JOBS="$(nproc)"
-
-CFG_DIR="$KERNEL_DIR/arch/arm64/configs"
-MERGE_OUT="$KERNEL_DIR/out"
-mkdir -p "$MERGE_OUT"
-
-echo "[*] Merging defconfig fragments ..."
-BASE_VENDOR_CFG="$CFG_DIR/vendor/waipio_GKI.config"
-DEVICE_CFG="$(find "$CFG_DIR" -type f \( -iname '*gts8wifi*perf*config' -o -iname '*gts8wifi*diff*.config' -o -iname '*gts8wifi*defconfig' \) | sort | head -1 || true)"
-
-if [ -z "${DEVICE_CFG:-}" ]; then
-    DEVICE_CFG="$CFG_DIR/vendor/NX709S-perf_diff.config"
-fi
-if [ ! -f "$DEVICE_CFG" ]; then
-    echo "[!] Could not find a gts8wifi defconfig/diff fragment to merge."
+if [ ! -f "$BUILD_SCRIPT" ]; then
+    echo "[!] Expected build script not found: $BUILD_SCRIPT"
     exit 1
 fi
 
-MERGE_FILES=("$CFG_DIR/gki_defconfig")
-BASE_DESC="gki_defconfig"
-if [ -f "$BASE_VENDOR_CFG" ]; then
-    MERGE_FILES+=("$BASE_VENDOR_CFG")
-    BASE_DESC+=" + vendor/waipio_GKI.config"
-fi
-MERGE_FILES+=("$DEVICE_CFG")
+echo "[*] Building gts8wifi kernel via root script:"
+echo "    $BUILD_SCRIPT"
 
-echo "    base:  $BASE_DESC"
-echo "    diff:  ${DEVICE_CFG#$KERNEL_DIR/}"
-
-ARCH=arm64 bash "$KERNEL_DIR/scripts/kconfig/merge_config.sh" -m -O "$MERGE_OUT" \
-    "${MERGE_FILES[@]}" 2>&1 | tail -10
-
-if [ ! -f "$MERGE_OUT/.config" ]; then
-    echo "[!] merge_config did not produce .config — check fragment paths"
-    exit 1
-fi
-echo "[*] Merged .config size: $(wc -l < "$MERGE_OUT/.config") lines"
-
-# ---- Job count: cap at 2 on small CI runners (OOM-prone during link) ----
-TOTAL_MEM_GB=$(awk '/MemTotal/{printf "%d", $2/1024/1024}' /proc/meminfo 2>/dev/null || echo 8)
-if [ "${KBUILD_JOBS:-}" != "" ]; then
-    JOBS="$KBUILD_JOBS"
-elif [ "$TOTAL_MEM_GB" -lt 12 ]; then
-    JOBS=2
-    echo "[*] Memory ${TOTAL_MEM_GB} GB < 12 GB -> capping JOBS=2 to avoid OOM"
-fi
-echo "[*] Build jobs: $JOBS  (mem: ${TOTAL_MEM_GB} GB, cpus: $(nproc))"
-
-# ---- Common make args ----
-MAKE_ARGS=(
-    ARCH=arm64
-    LLVM=1
-    LLVM_IAS=1
-    CC="ccache clang"
-    LD=ld.lld
-    AR=llvm-ar
-    NM=llvm-nm
-    OBJCOPY=llvm-objcopy
-    OBJDUMP=llvm-objdump
-    STRIP=llvm-strip
-    READELF=llvm-readelf
-    HOSTCC="ccache clang"
-    HOSTCXX="ccache clang++"
-    HOSTLD=ld.lld
-    CROSS_COMPILE=aarch64-linux-gnu-
-    O="$MERGE_OUT"
-    -j"$JOBS"
-)
-
-# ---- Resolve final config (olddefconfig in case of new symbols) ----
-echo "[*] Running olddefconfig ..."
-make "${MAKE_ARGS[@]}" KCONFIG_ALLCONFIG="$MERGE_OUT/.config" olddefconfig 2>&1 | \
-    tee "$LOG/olddefconfig.log" | tail -20
-
-# ---- Build Image + dtbo ----
-echo "[*] Building Image ..."
+cd "$KERNEL_ROOT"
 set -o pipefail
-make "${MAKE_ARGS[@]}" KCFLAGS="-Wno-error" Image 2>&1 | tee "$LOG/build.log" | \
-    grep -E "^\s+(CC|LD|AR|AS|GEN|UPD|HOSTCC|CALL|CHK|OBJCOPY|TARGET) " | tail -50 || true
+bash "$BUILD_SCRIPT" 2>&1 | tee "$LOG/build_kernel_gki.log"
 
-if [ ! -f "$MERGE_OUT/arch/arm64/boot/Image" ]; then
-    echo "[!] Image not produced. See $LOG/build.log"
-    tail -60 "$LOG/build.log"
+echo "[*] Locating build outputs ..."
+IMAGE_PATH="$(find "$KERNEL_ROOT" -type f -path '*/dist/Image' | sort | head -1 || true)"
+if [ -z "${IMAGE_PATH:-}" ] || [ ! -f "$IMAGE_PATH" ]; then
+    echo "[!] No built Image found under kernel source dist directories."
+    echo "    Check: $LOG/build_kernel_gki.log"
     exit 1
 fi
 
-cp "$MERGE_OUT/arch/arm64/boot/Image" "$DIST/Image"
-echo "[*] Image: $(ls -la "$DIST/Image")"
-echo "[*] Image size: $(du -h "$DIST/Image" | cut -f1)"
+cp -f "$IMAGE_PATH" "$DIST/Image"
+echo "[*] Copied Image to $DIST/Image"
 
-# DTBs (best-effort)
-echo "[*] Building DTBs ..."
-make "${MAKE_ARGS[@]}" KCFLAGS="-Wno-error" dtbs 2>&1 | tail -20 | tee -a "$LOG/build.log" || true
-
-# Pack dtbo using mkdtimg if available
-DTBO_OUT="$MERGE_OUT/arch/arm64/boot/dtbo.img"
-if command -v mkdtimg >/dev/null 2>&1; then
-    DTBO_DIR="$MERGE_OUT/arch/arm64/boot/dts/vendor/qcom"
-    if ls "$DTBO_DIR"/*.dtbo >/dev/null 2>&1; then
-        mkdtimg create "$DTBO_OUT" --page_size=4096 "$DTBO_DIR"/*.dtbo 2>/dev/null || true
-    fi
-fi
-[ -f "$DTBO_OUT" ] && cp "$DTBO_OUT" "$DIST/dtbo.img" && echo "[*] dtbo.img copied"
-
-# Modules (optional, only if needed)
-if grep -q "^CONFIG_MODULES=y" "$MERGE_OUT/.config" 2>/dev/null; then
-    echo "[*] Building modules ..."
-    make "${MAKE_ARGS[@]}" KCFLAGS="-Wno-error" modules 2>&1 | tail -10 | tee -a "$LOG/build.log" || true
+DTBO_PATH="$(find "$KERNEL_ROOT" -type f -path '*/dist/dtbo.img' | sort | head -1 || true)"
+if [ -n "${DTBO_PATH:-}" ] && [ -f "$DTBO_PATH" ]; then
+    cp -f "$DTBO_PATH" "$DIST/dtbo.img"
+    echo "[*] Copied dtbo.img to $DIST/dtbo.img"
 fi
 
-# ---- Summary ----
 echo
 echo "=========================================="
 echo "[*] Build complete."
-echo "    Image:        $DIST/Image  ($(du -h "$DIST/Image" 2>/dev/null | cut -f1))"
-[ -f "$DIST/dtbo.img" ] && echo "    dtbo.img:     $DIST/dtbo.img  ($(du -h "$DIST/dtbo.img" | cut -f1))"
-echo "    Build log:    $LOG/build.log"
-echo "    Module count: $(find "$MERGE_OUT" -name "*.ko" 2>/dev/null | wc -l)"
+echo "    Image:     $DIST/Image  ($(du -h "$DIST/Image" | cut -f1))"
+[ -f "$DIST/dtbo.img" ] && echo "    dtbo.img:  $DIST/dtbo.img  ($(du -h "$DIST/dtbo.img" | cut -f1))"
+echo "    Build log: $LOG/build_kernel_gki.log"
 echo "=========================================="
-ls -la "$DIST" 2>/dev/null
+ls -la "$DIST"

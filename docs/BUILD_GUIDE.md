@@ -84,7 +84,7 @@ mkbootimg/unpack_bootimg.py --boot_img boot_image/boot.img --out boot_image/unpa
 ## Phase 4 — Integrate KernelSU
 
 ```bash
-cd kernel_source/NX709S/kernel_platform/msm-kernel
+cd kernel_source/gts8wifi/kernel_platform/msm-kernel
 curl -LSs https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh | bash -s main
 ```
 
@@ -128,7 +128,7 @@ git clone --depth=1 https://gitlab.com/kalilinux/nethunter/build-scripts/kali-ne
 # Generic Android-12 5.10 patches:
 PATCH_DIR=nethunter/nethunter-fs/utils/kernel-builder/patches/android-5.10
 for p in $PATCH_DIR/*.patch; do
-    patch -p1 -d kernel_source/NX709S/kernel_platform/msm-kernel < "$p"
+    patch -p1 -d kernel_source/gts8wifi/kernel_platform/msm-kernel < "$p"
 done
 ```
 
@@ -165,25 +165,10 @@ CONFIG_NLS_UTF8=y
 ## Phase 6 — Build the kernel
 
 ```bash
-cd kernel_source/NX709S/kernel_platform/msm-kernel
-export ROOT_DIR=$(pwd)/../../..
-export OUT_DIR_SUFFIX=
-export KERNEL_DIR=msm-kernel
-
-# Use Google's official build wrapper:
-BUILD_CONFIG=msm-kernel/build.config.nubia.nx709s \
-SKIP_MRPROPER=1 \
-LTO=thin \
-VARIANT=gki \
-   ./build/build.sh -j$(nproc)
+bash scripts/06-build-kernel.sh
 ```
 
-If `build/build.sh` is missing (some GPL drops omit it), fetch from upstream:
-
-```bash
-git clone --depth=1 -b master \
-    https://android.googlesource.com/kernel/build ./build
-```
+`scripts/06-build-kernel.sh` executes `kernel_source/gts8wifi/build_kernel_gki.sh`.
 
 Output goes to `out/msm-kernel/dist/`:
 - `Image` — the kernel binary
@@ -191,7 +176,7 @@ Output goes to `out/msm-kernel/dist/`:
 - `vendor_boot.img` (sometimes) — packed vendor ramdisk
 - `boot.img` — packed boot image (with empty ramdisk by default)
 
-Manual fallback (no build.sh):
+Manual fallback (if the root build script fails):
 
 ```bash
 export ARCH=arm64

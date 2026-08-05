@@ -15,9 +15,9 @@ Paste the prompt below into GitHub Copilot Chat, ChatGPT, Claude, or any agentic
 > 1. Run `nubia/scripts/01-install-deps.sh` (use sudo).
 > 2. Run `nubia/scripts/02-fetch-toolchain.sh` to grab AOSP clang and mkbootimg.
 > 3. Skip `03-extract-bootimg.sh` for now (no phone connected); use the dumped boot images placed in `nubia/boot_image/` if present, otherwise create a no-ramdisk build target.
-> 4. Run `nubia/scripts/04-apply-kernelsu.sh` to integrate KernelSU into `nubia/kernel_source/NX709S/kernel_platform/msm-kernel/`.
+> 4. Run `nubia/scripts/04-apply-kernelsu.sh` to integrate KernelSU into `nubia/kernel_source/gts8wifi/kernel_platform/msm-kernel/`.
 > 5. Run `nubia/scripts/05-apply-nethunter.sh` to apply NetHunter kernel patches and append the NetHunter defconfig fragment to the existing `arch/arm64/configs/vendor/NX709S-perf_diff.config`.
-> 6. Run `nubia/scripts/06-build-kernel.sh` (uses `BUILD_CONFIG=msm-kernel/build.config.nubia.nx709s VARIANT=gki`).
+> 6. Run `nubia/scripts/06-build-kernel.sh` (this executes `nubia/kernel_source/gts8wifi/build_kernel_gki.sh`).
 > 7. Run `nubia/scripts/07-pack-bootimg.sh` to produce a flashable `boot-new.img`.
 >
 > If any step fails, read its log under `nubia/out/log/`, identify the failure, fix it (commit the fix to the branch), and retry only the failed step. Do **not** delete the source tree or re-clone unnecessarily; the kernel checkout is 1.5 GB.
@@ -55,8 +55,8 @@ If the build fails with **"merge_nubia_diffconfig: vendor/waipio-NX709S-gki_defc
 > mv arch/arm64/configs/vendor/.config arch/arm64/configs/vendor/waipio-NX709S-gki_defconfig
 > ```
 
-If `build.sh` is missing:
-> `git clone --depth=1 https://android.googlesource.com/kernel/build ./build` from the kernel_platform directory and re-run.
+If the build wrapper is missing:
+> Verify `nubia/kernel_source/gts8wifi/build_kernel_gki.sh` exists and re-run `nubia/scripts/03-fetch-kernel.sh`.
 
 ## Acceptance criteria
 

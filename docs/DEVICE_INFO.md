@@ -101,8 +101,8 @@ Full: `device-info/partitions.txt`
 
 | Field | Value |
 |---|---|
-| Repo | https://github.com/ztemt/NX709S |
-| Owner | ztemt (ZTE official) |
+| Repo | https://github.com/ben443/gts8-sm8450-kernel-platform |
+| Owner | ben443 |
 | Branch | main |
 | Description | nubia NX709S android 12 open source |
 | Source kernel version | **5.10.101** (older than running 5.10.168) |

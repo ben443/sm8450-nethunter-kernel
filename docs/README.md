@@ -21,7 +21,7 @@ nubia/
 │   ├── NX709S-perf_diff.config     # GKI variant diff (matches stock)
 │   └── NX709S_diff.config          # consolidate variant diff (debug)
 ├── kernel_source/
-│   └── NX709S/                     # cloned ztemt/NX709S (1.5 GB)
+│   └── gts8wifi/                   # cloned ben443/gts8-sm8450-kernel-platform
 │       └── kernel_platform/
 │           └── msm-kernel/         # the actual kernel tree (5.10.101)
 ├── boot_image/         # place your dumped boot.img / vendor_boot.img here
